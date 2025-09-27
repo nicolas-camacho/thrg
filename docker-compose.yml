@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # 1. SERVICIO DE LA BASE DE DATOS (PostgreSQL)
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432" # Mapea el puerto para acceso local (opcional)
+    volumes:
+      - db_data:/var/lib/postgresql/data # Persistencia de datos
+
+  # 2. SERVICIO DE LA APLICACIÓN GO
+  app:
+    build: . # Usa el Dockerfile en el directorio actual
+    ports:
+      - "8080:8080" # Expone el puerto del servidor Go
+    environment:
+      # Pasa las variables de entorno de la DB a la aplicación Go
+      DB_HOST: db # NOTA: Usa el nombre del servicio (db), no localhost
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_PORT: 5432
+    # Asegura que la aplicación espere a que la DB esté lista antes de arrancar.
+    depends_on:
+      - db
+    restart: on-failure
+
+volumes:
+  db_data:
