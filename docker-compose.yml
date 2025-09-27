@@ -27,6 +27,7 @@ services:
       DB_NAME: ${POSTGRES_DB}
       DB_PORT: 5432
     # Asegura que la aplicación espere a que la DB esté lista antes de arrancar.
+      SESSION_SECRET: ${SESSION_SECRET}
     depends_on:
       - db
     restart: on-failure

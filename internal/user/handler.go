@@ -53,7 +53,13 @@ func ServeLoginPageHandler(repo *Repository) http.HandlerFunc {
 				return
 			}
 
-			log.Printf("Admin %s logged in successfully", user.Username)
+			if err := LoginUser(w, r, user.ID); err != nil {
+				log.Printf("Failed to log in user: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			log.Printf("Admin %s logged in successfully (ID: %d)", user.Username, user.ID)
 			http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
 			return
 		}
