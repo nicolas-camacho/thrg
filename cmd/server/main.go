@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
+	"github.com/nicolas-camacho/thrg/internal/token"
 	"github.com/nicolas-camacho/thrg/internal/user"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -39,7 +40,10 @@ func main() {
 	}
 	log.Println("Successfully connected to PostgreSQL!")
 
-	err = db.AutoMigrate(&user.User{})
+	err = db.AutoMigrate(
+		&user.User{},
+		&token.RegistrationToken{},
+	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

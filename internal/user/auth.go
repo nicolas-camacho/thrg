@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,12 +25,21 @@ func AdminAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if auth, ok := session.Values[userKey]; !ok || auth == nil {
+		authID, ok := session.Values[userKey]
+		if !ok || authID == nil {
 			http.Redirect(w, r, "/admin/login", http.StatusTemporaryRedirect)
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		userID, ok := authID.(uint)
+		if !ok || userID == 0 {
+			http.Redirect(w, r, "/admin/login", http.StatusTemporaryRedirect)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "user_id", userID)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
