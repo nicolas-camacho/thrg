@@ -45,9 +45,11 @@ func (r *Repository) CreateNewToken(ctx context.Context, adminID uint) (string, 
 		}
 	}
 
+	expirationTime := time.Now().Add(24 * time.Hour)
 	newToken := RegistrationToken{
 		Value:       tokenValue,
 		CreatedByID: adminID,
+		ExpiresAt:   &expirationTime,
 	}
 
 	result := r.db.WithContext(ctx).Create(&newToken)
@@ -56,4 +58,14 @@ func (r *Repository) CreateNewToken(ctx context.Context, adminID uint) (string, 
 	}
 
 	return tokenValue, nil
+}
+
+func (r *Repository) GetAllTokens(ctx context.Context) ([]RegistrationToken, error) {
+	var tokens []RegistrationToken
+
+	result := r.db.WithContext(ctx).Order("created_at desc").Find(&tokens)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving tokens: %w", result.Error)
+	}
+	return tokens, nil
 }

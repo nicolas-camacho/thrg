@@ -40,11 +40,13 @@ This is a Go web application that uses the Chi router, GORM for database interac
 ## API Endpoints
 
 -   `GET /ping`: Returns a `pong` response. Used for health checks.
+-   `POST /api/admin/setup`: Sets up the initial admin user.
 -   `GET /admin/login`: Serves the admin login page.
--   `GET /admin/dashboard`: Serves the admin dashboard page. This endpoint is protected and requires authentication.
+-   `GET /admin/dashboard`: Serves the admin dashboard page, which allows generating and listing registration tokens. This endpoint is protected and requires authentication.
+-   `POST /admin/api/tokens`: Generates a new registration token.
+-   `GET /admin/api/tokens`: Lists all registration tokens.
+-   `GET /admin/logout`: Logs out the current user.
 
 ## Token-based Registration
 
-This application includes a feature for token-based user registration. An admin can generate a registration token that can be used by a new user to register.
-
-**Note:** The endpoint for generating the registration token is not yet exposed in the router.
+This application includes a feature for token-based user registration. An admin can generate a registration token from the dashboard that can be used by a new user to register.

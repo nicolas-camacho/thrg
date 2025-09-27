@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; }
+        .token-section { border: 1px solid #ccc; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #1e7e34; }
+        #tokenResult { margin-top: 15px; padding: 10px; border: 1px dashed #007bff; background-color: #e9f5ff; }
+        code { font-weight: bold; color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bienvenido, {{.Username}}</h1>
+        <p>Este es el panel de control de tu aplicación de juego de rol.</p>
+
+        <div class="token-section">
+            <h2>Generar Token de Registro</h2>
+            <p>Usa este botón para crear un token único que un nuevo jugador podrá usar para registrarse.</p>
+            
+            <button id="generateTokenBtn">Generar Nuevo Token</button>
+            
+            <div id="tokenResult" style="display:none;">
+                <p>Token Generado:</p>
+                <code></code>
+                <button onclick="copyToken()">Copiar</button>
+            </div>
+        </div>
+
+        <div class="tokens-list-section">
+            <h2 style="margin-top: 30px;">Tokens de Registro Creados</h2>
+            <button id="refreshTokensBtn">Actualizar Lista</button>
+            <table id="tokensTable" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Token</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Estado</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Usado por ID</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Creado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+        
+        <p style="margin-top: 30px;"><a href="/admin/logout">Cerrar Sesión</a></p>
+    </div>
+
+    <script>
+        const btn = document.getElementById('generateTokenBtn');
+        const resultDiv = document.getElementById('tokenResult');
+        const codeElement = resultDiv.querySelector('code');
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = 'Generando...';
+            codeElement.textContent = 'Procesando...';
+            resultDiv.style.display = 'block';
+
+            try {
+                // El navegador enviará automáticamente la cookie de sesión
+                const response = await fetch('/admin/api/tokens', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    codeElement.textContent = data.token;
+                    btn.textContent = 'Generar Nuevo Token';
+                } else {
+                    codeElement.textContent = 'ERROR: ' + (data.message || data.error || 'Fallo desconocido.');
+                    btn.textContent = 'Reintentar Generar Token';
+                }
+
+            } catch (error) {
+                console.error('Error de red:', error);
+                codeElement.textContent = 'ERROR: Fallo de conexión o red.';
+                btn.textContent = 'Reintentar Generar Token';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        function copyToken() {
+            const token = codeElement.textContent;
+            navigator.clipboard.writeText(token).then(() => {
+                alert('Token copiado al portapapeles!');
+            }).catch(err => {
+                console.error('Fallo al copiar:', err);
+            });
+        }
+
+        const tokensTableBody = document.querySelector('#tokensTable tbody');
+        const refreshBtn = document.getElementById('refreshTokensBtn');
+
+        refreshBtn.addEventListener('click', loadTokens);
+        
+        function formatState(isUsed) {
+            return isUsed ? 
+                '<span style="color: red; font-weight: bold;">USADO</span>' : 
+                '<span style="color: green; font-weight: bold;">DISPONIBLE</span>';
+        }
+
+        async function loadTokens() {
+            tokensTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Cargando tokens...</td></tr>';
+            refreshBtn.disabled = true;
+
+            try {
+                const response = await fetch('/admin/api/tokens');
+                const tokens = await response.json();
+
+                tokensTableBody.innerHTML = ''; // Limpiar antes de llenar
+                
+                if (tokens.length === 0) {
+                    tokensTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hay tokens creados.</td></tr>';
+                    return;
+                }
+
+                tokens.forEach(token => {
+                    const row = tokensTableBody.insertRow();
+                    row.innerHTML = `
+                        <td style="border: 1px solid #ccc; padding: 8px;">${token.Value}</td>
+                        <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">${formatState(token.IsUsed)}</td>
+                        <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">${token.UsedByID ? token.UsedByID : 'N/A'}</td>
+                        <td style="border: 1px solid #ccc; padding: 8px;">${new Date(token.CreatedAt).toLocaleString()}</td>
+                    `;
+                });
+
+            } catch (error) {
+                console.error('Error al cargar tokens:', error);
+                tokensTableBody.innerHTML = '<tr><td colspan="4" style="color: red; text-align: center;">Fallo al cargar la lista de tokens.</td></tr>';
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+        
+        // Cargar tokens al iniciar la página
+        loadTokens(); 
+    </script>
+</body>
+</html>

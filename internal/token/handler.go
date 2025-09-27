@@ -32,3 +32,21 @@ func GenerateTokenHandler(repo *Repository) http.HandlerFunc {
 		})
 	}
 }
+
+func ListTokensHandler(repo *Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tokens, err := repo.GetAllTokens(r.Context())
+		if err != nil {
+			log.Printf("Error retrieving tokens: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		if err := json.NewEncoder(w).Encode(tokens); err != nil {
+			log.Printf("Error encoding tokens to JSON: %v", err)
+		}
+	}
+}

@@ -12,12 +12,18 @@ type LoginPageData struct {
 }
 
 var loginTmpl *template.Template
+var dashboardTmpl *template.Template
 
 func init() {
 	var err error
 	loginTmpl, err = template.ParseFiles("web/login.html")
 	if err != nil {
 		log.Fatalf("Failed to parse login template: %v", err)
+	}
+
+	dashboardTmpl, err = template.ParseFiles("web/dashboard.html")
+	if err != nil {
+		log.Fatalf("Failed to parse dashboard template: %v", err)
 	}
 }
 
@@ -105,5 +111,38 @@ func SetupAdminHandler(repo *Repository) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(`{"message":"Admin user created successfully"}`))
+	}
+}
+
+func DashboardHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data := struct {
+			Username string
+		}{
+			Username: "Admin",
+		}
+		if err := dashboardTmpl.Execute(w, data); err != nil {
+			log.Printf("Failed to render dashboard template: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
+	}
+}
+
+func LogoutHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, err := Store.Get(r, SessionName)
+		if err != nil {
+			http.Redirect(w, r, "/admin/login", http.StatusTemporaryRedirect)
+			return
+		}
+
+		session.Values[userKey] = nil
+		session.Values["role"] = nil
+		session.Options.MaxAge = -1
+		if err := session.Save(r, w); err != nil {
+			log.Printf("Error saving session during logout: %v", err)
+		}
+
+		http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
 	}
 }

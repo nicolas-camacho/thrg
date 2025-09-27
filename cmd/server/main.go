@@ -62,6 +62,7 @@ func main() {
 	log.Println("Session store initialized.")
 
 	userRepo := user.NewRepository(db)
+	tokenRepo := token.NewRepository(db)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -72,17 +73,19 @@ func main() {
 		w.Write([]byte("pong"))
 	})
 
-	//r.Post("/api/admin/setup", user.SetupAdminHandler(userRepo))
+	r.Post("/api/admin/setup", user.SetupAdminHandler(userRepo))
 
 	r.Handle("/admin/login", user.ServeLoginPageHandler(userRepo))
 
 	r.Group(func(r chi.Router) {
 		r.Use(user.AdminAuthMiddleware)
 
-		r.Get("/admin/dashboard", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("Welcome to the admin dashboard!"))
-		})
+		r.Get("/admin/dashboard", user.DashboardHandler())
+		r.Post("/admin/api/tokens", token.GenerateTokenHandler(tokenRepo))
+		r.Get("/admin/api/tokens", token.ListTokensHandler(tokenRepo))
 	})
+
+	r.Get("/admin/logout", user.LogoutHandler())
 
 	log.Println("Starting server on :8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
