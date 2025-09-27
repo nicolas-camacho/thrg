@@ -61,22 +61,23 @@ func ServeLoginPageHandler(repo *Repository) http.HandlerFunc {
 				data := LoginPageData{Error: "Access denied, admin only"}
 				w.WriteHeader(http.StatusForbidden)
 				loginTmpl.Execute(w, data)
-									return
-								}
-				
-								if err := LoginUser(w, r, user.ID); err != nil {
-									log.Printf("Failed to log in user: %v", err)
-									http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-									return
-								}
-				
-								log.Printf("Admin %s logged in successfully (ID: %s)", user.Username, user.ID)
-								http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
-								return
-							}
-						}
-					}
-				type setupAdminRequest struct {
+				return
+			}
+
+			if err := LoginUser(w, r, user.ID); err != nil {
+				log.Printf("Failed to log in user: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			log.Printf("Admin %s logged in successfully (ID: %s)", user.Username, user.ID)
+			http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
+			return
+		}
+	}
+}
+
+type setupAdminRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }

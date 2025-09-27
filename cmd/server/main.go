@@ -95,8 +95,9 @@ func main() {
 	})
 
 	r.Post("/api/admin/setup", user.SetupAdminHandler(userRepo))
-
 	r.Handle("/admin/login", user.ServeLoginPageHandler(userRepo))
+	r.Get("/admin/logout", user.LogoutHandler())
+	r.Post("/api/player/register", user.RegisterPlayerHandler(userRepo, tokenRepo))
 
 	r.Group(func(r chi.Router) {
 		r.Use(user.AdminAuthMiddleware)
@@ -106,10 +107,6 @@ func main() {
 		r.Get("/admin/api/tokens", token.ListTokensHandler(tokenRepo, userRepo))
 		r.Get("/admin/api/players", user.ListPlayersHandler(userRepo))
 	})
-
-	r.Get("/admin/logout", user.LogoutHandler())
-
-	r.Post("/api/player/register", user.RegisterPlayerHandler(userRepo, tokenRepo))
 
 	port := os.Getenv("PORT")
 	if port == "" {
