@@ -1,6 +1,9 @@
 package user
 
 import (
+	"time"
+
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -10,8 +13,15 @@ const (
 	RolePlayer = "player"
 )
 
+type UserModelBase struct {
+	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+}
+
 type User struct {
-	gorm.Model
+	UserModelBase
 	Username     string `gorm:"uniqueIndex;not null"`
 	PasswordHash string `gorm:"not null"`
 	Role         string `gorm:"default:player"`
@@ -24,4 +34,9 @@ func (u *User) SetPassword(password string) error {
 	}
 	u.PasswordHash = string(hash)
 	return nil
+}
+
+func (u *User) CheckPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
+	return err == nil
 }

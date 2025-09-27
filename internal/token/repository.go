@@ -3,61 +3,70 @@ package token
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-const TokenLength = 16
-
 type Repository struct {
 	db *gorm.DB
+}
+
+type TokenDTO struct {
+	Value          string    `json:"Value"`
+	IsUsed         bool      `json:"IsUsed"`
+	UsedByUsername string    `json:"UsedByUsername"`
+	CreatedAt      time.Time `json:"CreatedAt"`
 }
 
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func generateRandomToken(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
+func (r *Repository) CreateNewToken(ctx context.Context, adminID uuid.UUID) (string, error) {
+	tokenUUID, err := uuid.NewRandom()
+	if err != nil {
+		return "", fmt.Errorf("error generating UUID: %w", err)
 	}
-	return string(b)
-}
+	tokenValue := tokenUUID.String()
 
-func (r *Repository) CreateNewToken(ctx context.Context, adminID uint) (string, error) {
-	var tokenValue string
-
-	for {
-		tokenValue = generateRandomToken(TokenLength)
-
-		var existing RegistrationToken
-		if err := r.db.WithContext(ctx).Where("value = ?", tokenValue).First(&existing).Error; err != nil {
-			if err != gorm.ErrRecordNotFound {
-				return "", fmt.Errorf("error checking existing token: %w", err)
-			}
-			break
-		}
-	}
-
-	expirationTime := time.Now().Add(24 * time.Hour)
 	newToken := RegistrationToken{
 		Value:       tokenValue,
 		CreatedByID: adminID,
-		ExpiresAt:   &expirationTime,
 	}
 
 	result := r.db.WithContext(ctx).Create(&newToken)
 	if result.Error != nil {
-		return "", fmt.Errorf("error creating new token: %w", result.Error)
+		return "", fmt.Errorf("error creating token: %w", result.Error)
+	}
+	return tokenValue, nil
+}
+
+func (r *Repository) ValidateAndUseToken(ctx context.Context, tokenValue string, usedByID uuid.UUID) (*RegistrationToken, error) {
+	var token RegistrationToken
+
+	result := r.db.WithContext(ctx).Where("value = ?", tokenValue).First(&token)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("token not found")
+		}
+		return nil, fmt.Errorf("error retrieving token: %w", result.Error)
 	}
 
-	return tokenValue, nil
+	if token.IsUsed {
+		return nil, fmt.Errorf("token has already been used")
+	}
+
+	token.IsUsed = true
+	token.UsedByID = &usedByID
+
+	result = r.db.WithContext(ctx).Save(&token)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error updating token as used: %w", result.Error)
+	}
+
+	return &token, nil
 }
 
 func (r *Repository) GetAllTokens(ctx context.Context) ([]RegistrationToken, error) {

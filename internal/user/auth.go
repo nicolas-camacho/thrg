@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
+	"github.com/nicolas-camacho/thrg/internal/contextutil"
 )
 
 const (
@@ -31,19 +33,19 @@ func AdminAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		userID, ok := authID.(uint)
-		if !ok || userID == 0 {
+		userID, ok := authID.(uuid.UUID)
+		if !ok || userID == uuid.Nil {
 			http.Redirect(w, r, "/admin/login", http.StatusTemporaryRedirect)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "user_id", userID)
+		ctx := context.WithValue(r.Context(), contextutil.UserIDContextKey, userID)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func LoginUser(w http.ResponseWriter, r *http.Request, userID uint) error {
+func LoginUser(w http.ResponseWriter, r *http.Request, userID uuid.UUID) error {
 	session, err := Store.Get(r, SessionName)
 	if err != nil {
 		return fmt.Errorf("error retrieving session: %w", err)

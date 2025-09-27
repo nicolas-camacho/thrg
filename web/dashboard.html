@@ -36,17 +36,30 @@
         <div class="tokens-list-section">
             <h2 style="margin-top: 30px;">Tokens de Registro Creados</h2>
             <button id="refreshTokensBtn">Actualizar Lista</button>
-            <table id="tokensTable" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
+            <table id="tokensTable" style="width: 100%; margin-top: 15px; border-collapse: collapse; background-color: #fff;">
                 <thead>
                     <tr>
                         <th style="border: 1px solid #ccc; padding: 8px;">Token</th>
                         <th style="border: 1px solid #ccc; padding: 8px;">Estado</th>
-                        <th style="border: 1px solid #ccc; padding: 8px;">Usado por ID</th>
-                        <th style="border: 1px solid #ccc; padding: 8px;">Creado</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Usado por (Username)</th> <th style="border: 1px solid #ccc; padding: 8px;">Creado</th>
                     </tr>
                 </thead>
-                <tbody>
-                    </tbody>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="players-list-section">
+            <h2 style="margin-top: 30px;">Lista de Jugadores (Players)</h2>
+            <button id="refreshPlayersBtn">Actualizar Jugadores</button>
+            <table id="playersTable" style="width: 100%; margin-top: 15px; border-collapse: collapse; background-color: #fff;">
+                <thead>
+                    <tr>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Username</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">Rol</th>
+                        <th style="border: 1px solid #ccc; padding: 8px;">UUID (oculto)</th> <th style="border: 1px solid #ccc; padding: 8px;">Registrado</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
             </table>
         </div>
         
@@ -132,11 +145,9 @@
                     row.innerHTML = `
                         <td style="border: 1px solid #ccc; padding: 8px;">${token.Value}</td>
                         <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">${formatState(token.IsUsed)}</td>
-                        <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">${token.UsedByID ? token.UsedByID : 'N/A'}</td>
-                        <td style="border: 1px solid #ccc; padding: 8px;">${new Date(token.CreatedAt).toLocaleString()}</td>
+                        <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">${token.UsedByUsername}</td> <td style="border: 1px solid #ccc; padding: 8px;">${new Date(token.CreatedAt).toLocaleString()}</td>
                     `;
                 });
-
             } catch (error) {
                 console.error('Error al cargar tokens:', error);
                 tokensTableBody.innerHTML = '<tr><td colspan="4" style="color: red; text-align: center;">Fallo al cargar la lista de tokens.</td></tr>';
@@ -145,8 +156,50 @@
             }
         }
         
-        // Cargar tokens al iniciar la página
-        loadTokens(); 
+        loadTokens();
+
+        const playersTableBody = document.querySelector('#playersTable tbody');
+        const refreshPlayersBtn = document.getElementById('refreshPlayersBtn');
+
+        refreshPlayersBtn.addEventListener('click', loadPlayers);
+
+        async function loadPlayers() {
+            playersTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Cargando jugadores...</td></tr>';
+            refreshPlayersBtn.disabled = true;
+
+            try {
+                const response = await fetch('/admin/api/players');
+                const players = await response.json();
+
+                playersTableBody.innerHTML = '';
+
+                if (players.length === 0) {
+                    playersTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hay jugadores registrados.</td></tr>';
+                    return;
+                }
+
+                players.forEach(player => {
+                    const row = playersTableBody.insertRow();
+                    // Ocultar/ofuscar el ID (mostrando solo los primeros 8 caracteres)
+                    const obfuscatedID = player.ID.substring(0, 8) + '...'; 
+
+                    row.innerHTML = `
+                        <td style="border: 1px solid #ccc; padding: 8px; font-weight: bold;">${player.Username}</td>
+                        <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">${player.Role}</td>
+                        <td style="border: 1px solid #ccc; padding: 8px; font-family: monospace;">${obfuscatedID}</td>
+                        <td style="border: 1px solid #ccc; padding: 8px;">${new Date(player.CreatedAt).toLocaleString()}</td>
+                    `;
+                });
+
+            } catch (error) {
+                console.error('Error al cargar jugadores:', error);
+                playersTableBody.innerHTML = '<tr><td colspan="4" style="color: red; text-align: center;">Fallo al cargar la lista de jugadores.</td></tr>';
+            } finally {
+                refreshPlayersBtn.disabled = false;
+            }
+        }
+
+        loadPlayers();
     </script>
 </body>
 </html>

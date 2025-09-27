@@ -11,13 +11,17 @@ This is a Go web application that uses the Chi router, GORM for database interac
 
 1.  **Create a `.env` file:**
 
-    Create a `.env` file in the root of the project with the following content. Make sure to use a strong, randomly generated string for `SESSION_SECRET`.
+    Create a `.env` file in the root of the project with the following content. Make sure to use a strong, randomly generated string for `SESSION_SECRET`. The application loads environment variables from this file using `godotenv`.
 
     ```
     POSTGRES_USER=user_app
     POSTGRES_PASSWORD=password_segura
     POSTGRES_DB=rol_db
     SESSION_SECRET=<your_strong_session_secret>
+    DB_HOST=localhost
+    DB_PORT=5432
+    PORT=8080
+    APP_ENV=development # Set to 'production' for secure cookies
     ```
 
 2.  **Run the application:**
@@ -26,7 +30,7 @@ This is a Go web application that uses the Chi router, GORM for database interac
     docker-compose up --build
     ```
 
-    The application will be available at `http://localhost:8080`.
+    The application will be available at `http://localhost:8080` (or the port specified in `PORT`).
 
 ## Technologies Used
 
@@ -36,6 +40,7 @@ This is a Go web application that uses the Chi router, GORM for database interac
 -   [gorilla/sessions](https://github.com/gorilla/sessions)
 -   [PostgreSQL](https://www.postgresql.org/)
 -   [Docker](https://www.docker.com/)
+-   [godotenv](https://github.com/joho/godotenv)
 
 ## API Endpoints
 
