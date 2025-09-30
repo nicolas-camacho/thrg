@@ -1,57 +1,107 @@
 # thrg
 
-This is a Go web application that uses the Chi router, GORM for database interaction, and PostgreSQL as the database. The application is containerized using Docker and includes session management and token-based registration.
+`thrg` es una aplicación web desarrollada en Go que implementa un sistema de autenticación dual para administradores y jugadores, con un mecanismo de registro basado en tokens. La aplicación está diseñada para ser desplegada fácilmente mediante Docker.
 
-## Prerequisites
+## Características
 
-- Docker
-- Docker Compose
+-   **Autenticación de Administrador:** Acceso seguro para administradores a un panel de control.
+-   **Panel de Control de Administrador:**
+    -   Generación de tokens de registro para nuevos jugadores.
+    -   Visualización de todos los tokens generados, su estado (disponible o usado) y qué jugador lo utilizó.
+    -   Lista de todos los jugadores registrados en el sistema.
+-   **Registro de Jugadores por Token:** Los nuevos usuarios solo pueden registrarse utilizando un token válido proporcionado por un administrador.
+-   **Autenticación de Jugadores:** Los jugadores pueden iniciar sesión para acceder a una página de juego.
+-   **Roles de Usuario:** Diferenciación clara entre roles de `admin` y `player`.
+-   **Contenerización:** Totalmente compatible con Docker para un despliegue y desarrollo sencillos.
 
-## Getting Started
+## Tecnologías Utilizadas
 
-1.  **Create a `.env` file:**
+-   **Backend:** [Go](https://golang.org/)
+-   **Enrutador HTTP:** [Chi](https://github.com/go-chi/chi)
+-   **ORM:** [GORM](https://gorm.io/) para la interacción con la base de datos.
+-   **Base de Datos:** [PostgreSQL](https://www.postgresql.org/)
+-   **Autenticación:** [gorilla/sessions](https://github.com/gorilla/sessions) para el manejo de sesiones.
+-   **Contenerización:** [Docker](https://www.docker.com/) y [Docker Compose](https://docs.docker.com/compose/)
+-   **Variables de Entorno:** [godotenv](https://github.com/joho/godotenv)
 
-    Create a `.env` file in the root of the project with the following content. Make sure to use a strong, randomly generated string for `SESSION_SECRET`. The application loads environment variables from this file using `godotenv`.
+## Cómo Empezar
 
+### Prerrequisitos
+
+-   [Docker](https://www.docker.com/get-started)
+-   [Docker Compose](https://docs.docker.com/compose/install/)
+
+### Instalación y Ejecución
+
+1.  **Clona el repositorio:**
+
+    ```bash
+    git clone <URL_DEL_REPOSITORIO>
+    cd thrg
     ```
+
+2.  **Crea un archivo `.env`:**
+
+    Crea un archivo `.env` en la raíz del proyecto, basándote en el `.env.example`. Asegúrate de generar un valor seguro y aleatorio para `SESSION_SECRET`.
+
+    ```env
     POSTGRES_USER=user_app
     POSTGRES_PASSWORD=password_segura
     POSTGRES_DB=rol_db
     SESSION_SECRET=<your_strong_session_secret>
-    DB_HOST=localhost
+    DB_HOST=db
     DB_PORT=5432
     PORT=8080
-    APP_ENV=development # Set to 'production' for secure cookies
+    APP_ENV=development # Cambia a 'production' para cookies seguras
     ```
 
-2.  **Run the application:**
+3.  **Inicia la aplicación con Docker Compose:**
+
+    Este comando construirá la imagen de la aplicación Go y levantará los contenedores de la aplicación y la base de datos.
 
     ```bash
     docker-compose up --build
     ```
 
-    The application will be available at `http://localhost:8080` (or the port specified in `PORT`).
+    La aplicación estará disponible en `http://localhost:8080`.
 
-## Technologies Used
+## Endpoints de la API
 
--   [Go](https://golang.org/)
--   [Chi](https://github.com/go-chi/chi)
--   [GORM](https://gorm.io/)
--   [gorilla/sessions](https://github.com/gorilla/sessions)
--   [PostgreSQL](https://www.postgresql.org/)
--   [Docker](https://www.docker.com/)
--   [godotenv](https://github.com/joho/godotenv)
+### Autenticación y Configuración
 
-## API Endpoints
+-   `POST /api/admin/setup`: Crea el primer usuario administrador. Solo puede ser ejecutado una vez.
+-   `POST /api/player/register`: Registra a un nuevo jugador utilizando un token válido.
+-   `POST /api/player/login`: Inicia sesión como jugador.
 
--   `GET /ping`: Returns a `pong` response. Used for health checks.
--   `POST /api/admin/setup`: Sets up the initial admin user.
--   `GET /admin/login`: Serves the admin login page.
--   `GET /admin/dashboard`: Serves the admin dashboard page, which allows generating and listing registration tokens. This endpoint is protected and requires authentication.
--   `POST /admin/api/tokens`: Generates a new registration token.
--   `GET /admin/api/tokens`: Lists all registration tokens.
--   `GET /admin/logout`: Logs out the current user.
+### Rutas de Administrador
 
-## Token-based Registration
+-   `GET /admin/login`: Página de inicio de sesión para administradores.
+-   `POST /admin/login`: Procesa el formulario de inicio de sesión del administrador.
+-   `GET /admin/dashboard`: Panel de control del administrador (ruta protegida).
+-   `GET /admin/logout`: Cierra la sesión del administrador.
+-   `POST /admin/api/tokens`: (API) Genera un nuevo token de registro.
+-   `GET /admin/api/tokens`: (API) Lista todos los tokens de registro.
+-.
+-   `GET /admin/api/players`: (API) Lista todos los jugadores registrados.
 
-This application includes a feature for token-based user registration. An admin can generate a registration token from the dashboard that can be used by a new user to register.
+### Rutas de Jugador
+
+-   `GET /player/login`: Página de inicio de sesión para jugadores.
+-   `GET /player/game`: Página principal del juego para jugadores autenticados (ruta protegida).
+-   `GET /player/logout`: Cierra la sesión del jugador.
+
+## Estructura del Proyecto
+
+```
+├── cmd/server/main.go      # Punto de entrada de la aplicación
+├── internal/               # Lógica de negocio principal
+│   ├── contextutil/        # Utilidades de contexto
+│   ├── core/               # Modelos de dominio principales
+│   ├── token/              # Lógica para tokens (modelo, repositorio, handler)
+│   └── user/               # Lógica para usuarios (modelo, repositorio, handler, auth)
+├── web/                    # Archivos HTML del frontend
+├── .env.example            # Ejemplo de variables de entorno
+├── Dockerfile              # Define la imagen Docker de la aplicación
+├── docker-compose.yml      # Orquesta los servicios de la aplicación
+└── go.mod                  # Dependencias del proyecto
+```
