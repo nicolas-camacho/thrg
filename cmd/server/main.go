@@ -13,6 +13,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
+	"github.com/nicolas-camacho/thrg/internal/character"
+	"github.com/nicolas-camacho/thrg/internal/story"
 	"github.com/nicolas-camacho/thrg/internal/token"
 	"github.com/nicolas-camacho/thrg/internal/user"
 	"gorm.io/driver/postgres"
@@ -65,6 +67,11 @@ func main() {
 	err = db.AutoMigrate(
 		&user.User{},
 		&token.RegistrationToken{},
+		&story.Story{},
+		&story.Act{},
+		&story.Option{},
+		&story.Consequence{},
+		&character.Character{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
@@ -85,6 +92,12 @@ func main() {
 
 	userRepo := user.NewRepository(db)
 	tokenRepo := token.NewRepository(db)
+	storyRepo := story.NewRepository(db)
+	//characterRepo := character.NewRepository(db)
+
+	storyLoader := story.NewLoaderService(storyRepo)
+
+	log.Println("Starting server...")
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -115,9 +128,13 @@ func main() {
 		r.Post("/admin/api/tokens", token.GenerateTokenHandler(tokenRepo))
 		r.Get("/admin/api/tokens", token.ListTokensHandler(tokenRepo, userRepo))
 		r.Get("/admin/api/players", user.ListPlayersHandler(userRepo))
+		r.Post("/admin/api/stories/load", storyLoader.LoadStoriesHandler)
 	})
 
 	// Player routes
+	r.Get("/player/register", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "web/player_register.html")
+	})
 	r.Get("/player/login", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "web/player_login.html")
 	})
