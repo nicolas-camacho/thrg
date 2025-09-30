@@ -114,3 +114,15 @@ func (r *Repository) GetAllPlayers(ctx context.Context) ([]User, error) {
 	}
 	return users, nil
 }
+
+func (r *Repository) GetUserByUsername(ctx context.Context, username string) (*User, error) {
+	var user User
+	result := r.db.WithContext(ctx).First(&user, "username = ?", username)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get user by username: %w", result.Error)
+	}
+	return &user, nil
+}

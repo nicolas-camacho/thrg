@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	sessionName = "admin_session"
+	adminSessionName  = "admin_session"
+	playerSessionName = "player_session"
 )
 
 var store *sessions.CookieStore
@@ -94,18 +95,44 @@ func main() {
 		w.Write([]byte("pong"))
 	})
 
-	r.Post("/api/admin/setup", user.SetupAdminHandler(userRepo))
-	r.Handle("/admin/login", user.ServeLoginPageHandler(userRepo))
-	r.Get("/admin/logout", user.LogoutHandler())
+	//API ROUTES
 	r.Post("/api/player/register", user.RegisterPlayerHandler(userRepo, tokenRepo))
+	r.Post("/api/player/login", user.PlayerLoginHandler(userRepo, playerSessionName))
+	r.Post("/api/admin/setup", user.SetupAdminHandler(userRepo))
 
+	// Admin routes
+	r.Handle("/admin/login", user.ServeLoginPageHandler(userRepo))
+	r.Get("/admin/logout", func(w http.ResponseWriter, r *http.Request) {
+		if err := user.LogoutUser(w, r, adminSessionName); err != nil {
+			log.Printf("Failed to log out user: %v", err)
+		}
+		http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+	})
 	r.Group(func(r chi.Router) {
-		r.Use(user.AdminAuthMiddleware)
+		r.Use(user.AdminAuthMiddleware(adminSessionName))
 
 		r.Get("/admin/dashboard", user.DashboardHandler())
 		r.Post("/admin/api/tokens", token.GenerateTokenHandler(tokenRepo))
 		r.Get("/admin/api/tokens", token.ListTokensHandler(tokenRepo, userRepo))
 		r.Get("/admin/api/players", user.ListPlayersHandler(userRepo))
+	})
+
+	// Player routes
+	r.Get("/player/login", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "web/player_login.html")
+	})
+	r.Get("/player/logout", func(w http.ResponseWriter, r *http.Request) {
+		if err := user.LogoutUser(w, r, playerSessionName); err != nil {
+			log.Printf("Failed to log out user: %v", err)
+		}
+		http.Redirect(w, r, "/player/login", http.StatusSeeOther)
+	})
+	r.Group(func(r chi.Router) {
+		r.Use(user.PlayerAuthMiddleware(playerSessionName))
+
+		r.Get("/player/game", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "web/game.html")
+		})
 	})
 
 	port := os.Getenv("PORT")

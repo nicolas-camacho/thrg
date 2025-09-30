@@ -64,7 +64,7 @@ func ServeLoginPageHandler(repo *Repository) http.HandlerFunc {
 				return
 			}
 
-			if err := LoginUser(w, r, user.ID); err != nil {
+			if err := LoginAdmin(w, r, user.ID, "admin_session"); err != nil {
 				log.Printf("Failed to log in user: %v", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
@@ -123,25 +123,6 @@ func SetupAdminHandler(repo *Repository) http.HandlerFunc {
 func DashboardHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "web/dashboard.html")
-	}
-}
-
-func LogoutHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session, err := Store.Get(r, SessionName)
-		if err != nil {
-			http.Redirect(w, r, "/admin/login", http.StatusTemporaryRedirect)
-			return
-		}
-
-		session.Values[userKey] = nil
-		session.Values["role"] = nil
-		session.Options.MaxAge = -1
-		if err := session.Save(r, w); err != nil {
-			log.Printf("Error saving session during logout: %v", err)
-		}
-
-		http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
 	}
 }
 
@@ -231,5 +212,45 @@ func ListPlayersHandler(userRepo *Repository) http.HandlerFunc {
 		if err := json.NewEncoder(w).Encode(dtos); err != nil {
 			log.Printf("Error al codificar JSON de jugadores: %v", err)
 		}
+	}
+}
+
+type PlayerLoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func PlayerLoginHandler(repo *Repository, playerSessionName string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req PlayerLoginRequest
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		user, err := repo.GetUserByUsername(r.Context(), req.Username)
+		if err != nil {
+			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+			return
+		}
+
+		if !user.CheckPassword(req.Password) {
+			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+			return
+		}
+
+		if err := LoginPlayer(w, r, user.ID, playerSessionName); err != nil {
+			log.Printf("Failed to log in user: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message":  "Player logged in successfully",
+			"user_id":  user.ID.String(),
+			"username": user.Username,
+		})
 	}
 }

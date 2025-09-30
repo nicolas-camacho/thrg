@@ -16,3 +16,7 @@ func GetUserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 	}
 	return uuid.Nil, false
 }
+
+func SetUserIDInContext(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, UserIDContextKey, userID)
+}
